@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#090d18">
+<meta name="description" content="Student Pulse academic analytics dashboard">
+<title>Student Pulse | Academic Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#090d18;--panel:#121d2c;--panel-2:#0f1826;--line:#29384d;
+  --text:#edf3ff;--muted:#91a0b7;--cyan:#5eead4;--violet:#a78bfa;
+  --amber:#fbbf24;--rose:#fb7185;--green:#34d399;
+  --radius:16px;--shadow:0 12px 40px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;padding:24px;
+  background-image:
+    radial-gradient(1200px 600px at 10% -10%, rgba(94,234,212,.10), transparent 60%),
+    radial-gradient(1000px 500px at 100% 0%, rgba(167,139,250,.10), transparent 60%);
+}
+.wrap{max-width:1400px;margin:0 auto}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{
+  width:44px;height:44px;border-radius:12px;
+  background:linear-gradient(135deg,var(--cyan),var(--violet));
+  display:grid;place-items:center;font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#06121a;
+  box-shadow:0 8px 24px rgba(94,234,212,.30);
+}
+h1{font-family:'Space Grotesk';font-size:22px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.search{
+  display:flex;align-items:center;gap:8px;background:var(--panel);
+  border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:220px;
+}
+.search input{background:none;border:none;outline:none;color:var(--text);font-size:13px;width:100%;font-family:inherit}
+.btn{
+  background:var(--panel);color:var(--text);border:1px solid var(--line);
+  padding:9px 14px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;
+  transition:.15s;font-family:inherit;display:flex;align-items:center;gap:6px;
+}
+.btn:hover{border-color:var(--cyan);color:var(--cyan);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--violet));color:#06121a;border:none;font-weight:600}
+
+/* KPI GRID */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+.kpi{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;position:relative;overflow:hidden;box-shadow:var(--shadow);
+  transition:.2s;
+}
+.kpi:hover{transform:translateY(-2px);border-color:rgba(94,234,212,.4)}
+.kpi::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(135deg,rgba(94,234,212,.08),transparent 60%);
+}
+.kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.kpi .value{font-family:'Space Grotesk';font-size:32px;font-weight:700;margin-top:8px;letter-spacing:-.02em}
+.kpi .delta{font-size:12px;margin-top:8px;display:flex;align-items:center;gap:6px}
+.up{color:var(--green)}.down{color:var(--rose)}
+.spark{position:absolute;bottom:0;right:0;width:100px;height:40px;opacity:.5}
+
+/* GRID LAYOUT */
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+@media(max-width:900px){.grid,.grid-3{grid-template-columns:1fr}}
+
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.card h2{
+  font-family:'Space Grotesk';font-size:15px;font-weight:600;margin-bottom:16px;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.card h2 .badge{
+  font-size:11px;font-family:'DM Mono';color:var(--cyan);
+  background:rgba(94,234,212,.10);padding:3px 8px;border-radius:6px;border:1px solid rgba(94,234,212,.25);
+}
+.chart-box{position:relative;height:260px}
+.chart-sm{height:180px}
+
+/* STUDENT TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{
+  text-align:left;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;
+  letter-spacing:.08em;padding:10px 8px;border-bottom:1px solid var(--line);
+}
+tbody td{padding:12px 8px;border-bottom:1px solid rgba(41,56,77,.5)}
+tbody tr{transition:.15s}
+tbody tr:hover{background:rgba(94,234,212,.04)}
+.avatar{
+  width:30px;height:30px;border-radius:50%;display:inline-grid;place-items:center;
+  font-size:12px;font-weight:700;color:#06121a;margin-right:10px;vertical-align:middle;
+}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;font-family:'DM Mono'}
+.pill.a{background:rgba(52,211,153,.15);color:var(--green)}
+.pill.b{background:rgba(94,234,212,.15);color:var(--cyan)}
+.pill.c{background:rgba(251,191,36,.15);color:var(--amber)}
+.pill.d{background:rgba(251,113,133,.15);color:var(--rose)}
+.bar{height:6px;border-radius:3px;background:rgba(41,56,77,.8);overflow:hidden;margin-top:4px}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+
+/* DONUT/ACTIVITY */
+.legend{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.legend-row{display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.legend-row span:first-child{display:flex;align-items:center;gap:8px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:3px}
+
+/* ACTIVITY FEED */
+.feed{display:flex;flex-direction:column;gap:14px;max-height:280px;overflow-y:auto;padding-right:4px}
+.feed::-webkit-scrollbar{width:4px}
+.feed::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.feed-item{display:flex;gap:12px;font-size:13px;padding-bottom:12px;border-bottom:1px solid rgba(41,56,77,.4)}
+.feed-item:last-child{border:none}
+.feed-item .icon{
+  width:32px;height:32px;border-radius:10px;background:rgba(94,234,212,.12);
+  display:grid;place-items:center;flex-shrink:0;color:var(--cyan);
+}
+.feed-item .txt{flex:1;line-height:1.5}
+.feed-item .txt b{color:var(--text);font-weight:600}
+.feed-item .time{color:var(--muted);font-size:11px;margin-top:2px;font-family:'DM Mono'}
+
+/* MODAL */
+.modal{
+  position:fixed;inset:0;background:rgba(9,13,24,.85);backdrop-filter:blur(8px);
+  display:none;place-items:center;z-index:100;padding:20px;
+}
+.modal.show{display:grid}
+.modal-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:20px;
+  padding:28px;max-width:480px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.6);
+}
+.modal-card h3{font-family:'Space Grotesk';font-size:18px;margin-bottom:8px}
+.modal-card p{color:var(--muted);font-size:13px;margin-bottom:20px}
+.modal-card input{
+  width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+  padding:12px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;
+}
+.modal-card input:focus{border-color:var(--cyan)}
+.modal-card .row{display:flex;gap:10px}
+.modal-card .row .btn{flex:1;justify-content:center}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
+  background:var(--panel);border:1px solid var(--cyan);color:var(--text);
+  padding:12px 20px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);
+  transition:.3s;z-index:200;display:flex;align-items:center;gap:8px;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:300;transition:.4s}
+#loader.hide{opacity:0;pointer-events:none}
+.spinner{width:48px;height:48px;border:3px solid var(--line);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="loader"><div class="spinner"></div></div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">SP</div>
+      <div>
+        <h1>Student Pulse</h1>
+        <div class="sub">Academic intelligence · Fall 2026</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#91a0b7" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="searchBox" placeholder="Search students…">
+      </div>
+      <button class="btn" onclick="toggleTheme()">🌓 Theme</button>
+      <button class="btn" onclick="downloadCSV()">⬇ Export</button>
+      <button class="btn primary" onclick="openModal()">＋ New Student</button>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <section class="kpis" id="kpiGrid">
+    <div class="kpi">
+      <div class="label">Total Students</div>
+      <div class="value" id="kpiStudents">—</div>
+      <div class="delta up">▲ 12% vs last term</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Avg. GPA</div>
+      <div class="value" id="kpiGPA">—</div>
+      <div class="delta up">▲ 0.14 improvement</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Attendance</div>
+      <div class="value" id="kpiAtt">—</div>
+      <div class="delta down">▼ 1.8% this week</div>
+    </div>
+    <div class="kpi">
+      <div class="label">At Risk</div>
+      <div class="value" id="kpiRisk">—</div>
+      <div class="delta down">▼ 3 flagged</div>
+    </div>
+  </section>
+
+  <!-- ROW 1 -->
+  <section class="grid">
+    <div class="card">
+      <h2>Performance Trend <span class="badge">LAST 8 WEEKS</span></h2>
+      <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Grade Distribution</h2>
+      <div class="chart-box chart-sm"><canvas id="donutChart"></canvas></div>
+      <div class="legend" id="donutLegend"></div>
+    </div>
+  </section>
+
+  <!-- ROW 2 -->
+  <section class="grid-3">
+    <div class="card">
+      <h2>Subject Averages</h2>
+      <div class="chart-box chart-sm"><canvas id="subjectChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Weekly Engagement</h2>
+      <div class="chart-box chart-sm"><canvas id="engageChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Recent Activity</h2>
+      <div class="feed" id="feed"></div>
+    </div>
+  </section>
+
+  <!-- STUDENT TABLE -->
+  <section class="card">
+    <h2>Student Roster <span class="badge" id="rosterCount">0</span></h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th><th>Grade</th><th>GPA</th><th>Attendance</th><th>Progress</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="rosterBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <h3>➕ Add Student</h3>
+    <p>Enter student details to append to the roster.</p>
+    <input id="mName" placeholder="Full name">
+    <input id="mGrade" placeholder="Grade (A/B/C/D)">
+    <input id="mGPA" placeholder="GPA (0.0 – 4.0)" type="number" step="0.1">
+    <div class="row">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="addStudent()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ---------- DATA ---------- */
+const students = [
+  {name:"Ava Chen",     grade:"A", gpa:3.9, att:98, prog:92},
+  {name:"Liam Patel",   grade:"B", gpa:3.3, att:91, prog:78},
+  {name:"Noah Reyes",   grade:"A", gpa:3.8, att:96, prog:88},
+  {name:"Mia Novak",    grade:"C", gpa:2.5, att:78, prog:55},
+  {name:"Zara Ali",     grade:"B", gpa:3.4, att:93, prog:81},
+  {name:"Kai Tanaka",   grade:"D", gpa:1.9, att:62, prog:34},
+  {name:"Sofia Rossi",  grade:"A", gpa:3.95,att:99, prog:95},
+  {name:"Ethan Brooks", grade:"B", gpa:3.1, att:88, prog:72},
+  {name:"Isla Monroe",  grade:"C", gpa:2.7, att:80, prog:60},
+  {name:"Owen Park",    grade:"A", gpa:3.7, att:94, prog:86},
+];
+
+const activities = [
+  {icon:"✓", text:"<b>Ava Chen</b> submitted <b>Physics Lab 4</b>", time:"2m ago"},
+  {icon:"★", text:"<b>Sofia Rossi</b> earned a perfect score on <b>Calculus Quiz</b>", time:"18m ago"},
+  {icon:"⚠", text:"<b>Kai Tanaka</b> flagged for low attendance", time:"1h ago"},
+  {icon:"↑", text:"<b>Liam Patel</b> GPA improved from 3.1 → 3.3", time:"3h ago"},
+  {icon:"✎", text:"<b>New assignment</b> posted in Chemistry", time:"5h ago"},
+  {icon:"✓", text:"<b>Owen Park</b> completed <b>Reading Log</b>", time:"yesterday"},
+];
+
+/* ---------- RENDER ---------- */
+function gradeClass(g){return {A:"a",B:"b",C:"c",D:"d"}[g]||"b"}
+function initials(n){return n.split(" ").map(x=>x[0]).join("").slice(0,2)}
+
+function renderKPIs(){
+  const avgGPA = (students.reduce((s,x)=>s+x.gpa,0)/students.length).toFixed(2);
+  const avgAtt = Math.round(students.reduce((s,x)=>s+x.att,0)/students.length);
+  const risk   = students.filter(s=>s.gpa<2.5||s.att<75).length;
+  animateValue("kpiStudents", students.length);
+  document.getElementById("kpiGPA").textContent = avgGPA;
+  document.getElementById("kpiAtt").textContent = avgAtt + "%";
+  document.getElementById("kpiRisk").textContent = risk;
+}
+
+function animateValue(id, target){
+  const el = document.getElementById(id);
+  let cur = 0;
+  const step = Math.max(1, Math.ceil(target/20));
+  const iv = setInterval(()=>{
+    cur += step;
+    if(cur>=target){cur=target;clearInterval(iv)}
+    el.textContent = cur;
+  },30);
+}
+
+function renderRoster(filter=""){
+  const body = document.getElementById("rosterBody");
+  const q = filter.toLowerCase();
+  const list = students.filter(s => s.name.toLowerCase().includes(q));
+  body.innerHTML = list.map(s=>{
+    const color = {A:"#34d399",B:"#5eead4",C:"#fbbf24",D:"#fb7185"}[s.grade]||"#5eead4";
+    const status = (s.gpa<2.5||s.att<75) ? '<span class="pill d">At Risk</span>'
+                : (s.gpa>=3.7 ? '<span class="pill a">Excellent</span>'
+                              : '<span class="pill b">On Track</span>');
+    return `<tr>
+      <td><span class="avatar" style="background:${color}">${initials(s.name)}</span>${s.name}</td>
+      <td><span class="pill ${gradeClass(s.grade)}">${s.grade}</span></td>
+      <td style="font-family:'DM Mono'">${s.gpa.toFixed(2)}</td>
+      <td style="font-family:'DM Mono'">${s.att}%</td>
+      <td style="min-width:140px">
+        <div class="bar"><div class="bar-fill" style="width:${s.prog}%"></div></div>
+      </td>
+      <td>${status}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("rosterCount").textContent = list.length + " students";
+}
+
+function renderFeed(){
+  document.getElementById("feed").innerHTML = activities.map(a=>`
+    <div class="feed-item">
+      <div class="icon">${a.icon}</div>
+      <div class="txt"><div>${a.text}</div><div class="time">${a.time}</div></div>
+    </div>`).join("");
+}
+
+/* ---------- CHARTS ---------- */
+let trendChart, donutChart, subjectChart, engageChart;
+
+function initCharts(){
+  Chart.defaults.color = "#91a0b7";
+  Chart.defaults.font.family = "'DM Sans', sans-serif";
+  Chart.defaults.borderColor = "rgba(41,56,77,.5)";
+
+  // Trend
+  trendChart = new Chart(document.getElementById("trendChart"), {
+    type:"line",
+    data:{
+      labels:["W1","W2","W3","W4","W5","W6","W7","W8"],
+      datasets:[
+        {label:"Avg GPA", data:[3.1,3.15,3.22,3.28,3.31,3.38,3.42,3.48],
+         borderColor:"#5eead4", backgroundColor:"rgba(94,234,212,.12)",
+         tension:.4, fill:true, borderWidth:2, pointRadius:3, pointBackgroundColor:"#5eead4"},
+        {label:"Attendance %", data:[88,89,87,91,90,92,91,93],
+         borderColor:"#a78bfa", backgroundColor:"rgba(167,139,250,.10)",
+         tension:.4, fill:true, borderWidth:2, pointRadius:3, pointBackgroundColor:"#a78bfa", yAxisID:"y1"}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle'}}},
+      scales:{
+        y:{beginAtZero:false, min:2.8, max:4, grid:{color:"rgba(41,56,77,.4)"}},
+        y1:{position:"right", min:80, max:100, grid:{display:false}},
+        x:{grid:{display:false}}
+      }
+    }
+  });
+
+  // Donut
+  const dist = {A:0,B:0,C:0,D:0};
+  students.forEach(s=>dist[s.grade]++);
+  donutChart = new Chart(document.getElementById("donutChart"), {
+    type:"doughnut",
+    data:{
+      labels:["A","B","C","D"],
+      datasets:[{
+        data:[dist.A,dist.B,dist.C,dist.D],
+        backgroundColor:["#34d399","#5eead4","#fbbf24","#fb7185"],
+        borderWidth:0, spacing:3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:"70%",
+      plugins:{legend:{display:false}}
+    }
+  });
+  const total = students.length;
+  document.getElementById("donutLegend").innerHTML = Object.entries(dist).map(([k,v])=>{
+    const pct = Math.round(v/total*100);
+    const c = {A:"#34d399",B:"#5eead4",C:"#fbbf24",D:"#fb7185"}[k];
+    return `<div class="legend-row"><span><span class="dot" style="background:${c}"></span>Grade ${k}</span><span><b>${v}</b> · ${pct}%</span></div>`;
+  }).join("");
+
+  // Subject
+  subjectChart = new Chart(document.getElementById("subjectChart"), {
+    type:"bar",
+    data:{
+      labels:["Math","Sci","Eng","Hist","Art"],
+      datasets:[{
+        data:[3.4,3.2,3.6,3.1,3.8],
+        backgroundColor:["#5eead4","#a78bfa","#34d399","#fbbf24","#fb7185"],
+        borderRadius:6, barThickness:18
+      }]
+    },
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{beginAtZero:true,max:4,grid:{color:"rgba(41,56,77,.4)"}},y:{grid:{display:false}}}
+    }
+  });
+
+  // Engagement
+  engageChart = new Chart(document.getElementById("engageChart"), {
+    type:"bar",
+    data:{
+      labels:["Mon","Tue","Wed","Thu","Fri"],
+      datasets:[{
+        data:[82,91,76,88,95],
+        backgroundColor:"rgba(94,234,212,.7)",
+        borderRadius:6, barThickness:22
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,max:100,grid:{color:"rgba(41,56,77,.4)"}},x:{grid:{display:false}}}
+    }
+  });
+}
+
+/* ---------- ACTIONS ---------- */
+function openModal(){document.getElementById("modal").classList.add("show")}
+function closeModal(){document.getElementById("modal").classList.remove("show")}
+
+function addStudent(){
+  const name = document.getElementById("mName").value.trim();
+  const grade = document.getElementById("mGrade").value.trim().toUpperCase();
+  const gpa = parseFloat(document.getElementById("mGPA").value);
+  if(!name||!["A","B","C","D"].includes(grade)||isNaN(gpa)){
+    toast("⚠ Fill all fields correctly"); return;
+  }
+  students.push({name,grade,gpa,att:Math.round(70+Math.random()*30),prog:Math.round(gpa/4*100)});
+  renderRoster();
+  renderKPIs();
+  closeModal();
+  toast("✓ Added " + name);
+}
+
+function downloadCSV(){
+  const rows = [["Name","Grade","GPA","Attendance","Progress"],
+    ...students.map(s=>[s.name,s.grade,s.gpa,s.att,s.prog])];
+  const csv = rows.map(r=>r.join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "student-pulse-" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
+  toast("⬇ CSV exported");
+}
+
+function toggleTheme(){
+  document.body.classList.toggle("light");
+  document.documentElement.style.setProperty("--bg",
+    document.body.classList.contains("light") ? "#f4f7fb" : "#090d18");
+  document.documentElement.style.setProperty("--text",
+    document.body.classList.contains("light") ? "#0a1420" : "#edf3ff");
+  document.documentElement.style.setProperty("--panel",
+    document.body.classList.contains("light") ? "#ffffff" : "#121d2c");
+  document.documentElement.style.setProperty("--line",
+    document.body.classList.contains("light") ? "#d6e0ee" : "#29384d");
+  document.documentElement.style.setProperty("--muted",
+    document.body.classList.contains("light") ? "#5a6b82" : "#91a0b7");
+  toast("🌓 Theme toggled");
+}
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+/* ---------- INIT ---------- */
+window.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("searchBox").addEventListener("input", e=>renderRoster(e.target.value));
+  renderKPIs();
+  renderRoster();
+  renderFeed();
+  initCharts();
+  setTimeout(()=>document.getElementById("loader").classList.add("hide"), 400);
+});
+</script>
+</body>
+</html>
